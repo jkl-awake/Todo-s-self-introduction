@@ -37,6 +37,34 @@ export const useGameStore = defineStore('game', () => {
     }
   ])
 
+  const isLoading = ref(false)
+  const error = ref(null)
+
+  // 示例：从 API 加载游戏列表
+  async function fetchGames() {
+    isLoading.value = true
+    error.value = null
+    try {
+      // 这是一个示例 API 地址，你需要替换成真实的后端 API
+      // const response = await fetch('https://api.example.com/games')
+      
+      // 模拟 API 请求延迟
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // 模拟返回数据（实际使用时请取消上面 fetch 的注释并删除下面的模拟数据）
+      // if (!response.ok) throw new Error('Failed to fetch games')
+      // const data = await response.json()
+      // games.value = data
+      
+      console.log('API 请求示例已执行')
+    } catch (err) {
+      error.value = err.message
+      console.error('Error fetching games:', err)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   // Watch for changes and save to localStorage
   watch(games, (newGames) => {
     localStorage.setItem('my-games', JSON.stringify(newGames))
@@ -62,5 +90,5 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  return { games, addGame, getGameById, deleteGame }
+  return { games, isLoading, error, fetchGames, addGame, getGameById, deleteGame }
 })
