@@ -55,27 +55,25 @@ function submitGame() {
         </div>
       </div>
       
-      <TransitionGroup name="list" tag="div" class="game-list">
-        <div v-for="game in gameStore.games" :key="game.id" class="game-row glass-panel" @click="openDetail(game)">
-          <div class="row-image">
-            <img :src="game.cover" :alt="game.title" />
-            <div class="status-dot" :class="game.status.toLowerCase()" :title="game.status"></div>
+      <TransitionGroup name="list" tag="div" class="game-grid">
+        <div v-for="game in gameStore.games" :key="game.id" class="game-card glass-panel" @click="openDetail(game)">
+          <div class="card-image">
+            <img :src="game.cover" :alt="game.title" loading="lazy" />
+            <div class="card-overlay">
+              <span class="play-btn">查看详情</span>
+            </div>
+            <div class="status-badge-card" :class="game.status.toLowerCase()">
+              {{ game.status }}
+            </div>
           </div>
           
-          <div class="row-content">
-            <div class="row-main">
-              <h3>{{ game.title }}</h3>
-              <div class="row-meta">
-                <span class="platform-tag">{{ game.platform }}</span>
-                <div class="rating">
-                  <span v-for="n in 5" :key="n" class="star" :class="{ filled: n <= Math.round(game.rating) }">★</span>
-                </div>
+          <div class="card-content">
+            <h3 class="card-title">{{ game.title }}</h3>
+            <div class="card-meta">
+              <span class="platform-pill">{{ game.platform }}</span>
+              <div class="mini-rating" v-if="game.rating > 0">
+                ⭐ {{ game.rating }}
               </div>
-            </div>
-            
-            <div class="row-notes">
-              <p v-if="game.notes">{{ game.notes }}</p>
-              <p v-else class="empty-notes">暂无评价...</p>
             </div>
           </div>
         </div>
@@ -271,132 +269,145 @@ function submitGame() {
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-/* Game List Styles */
-.game-list {
+/* Game Grid Styles */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 25px;
+  padding-bottom: 40px;
+}
+
+.game-card {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-}
-
-.game-row {
-  display: flex;
-  align-items: center;
-  padding: 15px;
-  border-radius: var(--card-radius);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  height: 160px; /* Increased height */
-  cursor: pointer;
-}
-
-.game-row:hover {
-  transform: translateX(5px);
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.row-image {
-  position: relative;
-  width: 110px; /* Increased width */
-  height: 130px; /* Increased height */
-  flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  margin-right: 25px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  position: relative;
+  height: 100%;
 }
 
-.row-image img {
+.game-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+.card-image {
+  position: relative;
+  width: 100%;
+  padding-top: 133%; /* 3:4 Aspect Ratio */
+  overflow: hidden;
+  background: #eee;
+}
+
+.card-image img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.5s ease;
 }
 
-.status-dot {
+.game-card:hover .card-image img {
+  transform: scale(1.05);
+}
+
+.card-overlay {
   position: absolute;
-  bottom: 5px;
-  right: 5px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-}
-
-.status-dot.backlog { background: #bdc3c7; }
-.status-dot.playing { background: #2ecc71; }
-.status-dot.completed { background: #f1c40f; }
-.status-dot.dropped { background: #e74c3c; }
-
-.row-content {
-  flex: 1;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  height: 100%;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.row-main {
-  flex: 0 0 30%;
+.game-card:hover .card-overlay {
+  opacity: 1;
+}
+
+.play-btn {
+  background: #fff;
+  color: #333;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transform: translateY(10px);
+  transition: transform 0.3s ease;
+}
+
+.game-card:hover .play-btn {
+  transform: translateY(0);
+}
+
+.status-badge-card {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  backdrop-filter: blur(4px);
+}
+
+.status-badge-card.backlog { background: rgba(189, 195, 199, 0.9); }
+.status-badge-card.playing { background: rgba(46, 204, 113, 0.9); }
+.status-badge-card.completed { background: rgba(241, 196, 15, 0.9); }
+.status-badge-card.dropped { background: rgba(231, 76, 60, 0.9); }
+
+.card-content {
+  padding: 15px;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
 }
 
-.row-main h3 {
-  font-size: 1.2rem;
-  font-weight: 600;
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.row-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.platform-tag {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  background: rgba(0,0,0,0.05);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.rating {
-  display: flex;
-  gap: 1px;
-}
-
-.star {
-  color: #dfe6e9;
-  font-size: 0.8rem;
-}
-
-.star.filled {
-  color: #f1c40f;
-}
-
-.row-notes {
-  flex: 1;
-  padding-left: 30px;
-  border-left: 1px solid rgba(0,0,0,0.05);
-  height: 80%;
-  display: flex;
-  align-items: center;
-}
-
-.row-notes p {
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
+  margin-bottom: 10px;
+  line-height: 1.4;
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.empty-notes {
-  color: #b2bec3;
-  font-style: italic;
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.platform-pill {
+  font-size: 0.75rem;
+  background: rgba(0,0,0,0.06);
+  color: var(--text-secondary);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.mini-rating {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f1c40f;
 }
 
 /* Modal Styles */

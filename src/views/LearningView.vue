@@ -62,48 +62,48 @@ const knowledgeBase = ref([
   }
 ])
 
-const activeFilter = ref('All')
-const filters = [
-  { id: 'All', name: '全部' },
-  { id: 'languages', name: '编程语言' },
-  { id: 'frameworks', name: '框架' },
-  { id: 'cs', name: '计算机基础' }
-]
+const activeCategory = ref(knowledgeBase.value?.[0]?.id || '')
+const activeSubTopic = ref(knowledgeBase.value?.[0]?.subs?.[0]?.id || '')
+const activeArticle = ref(null)
 
-const filteredTopics = computed(() => {
-  if (activeFilter.value === 'All') {
-    return knowledgeBase.value
-  }
-  return knowledgeBase.value.filter(cat => cat.id === activeFilter.value)
+// 默认选中第一篇文章
+const firstSub = knowledgeBase.value?.[0]?.subs?.[0]
+if (firstSub?.articles?.length > 0) {
+  activeArticle.value = firstSub.articles[0]
+}
+
+const currentCategory = computed(() => {
+  return knowledgeBase.value.find(c => c.id === activeCategory.value)
 })
 
-const selectedTopic = ref(null)
-const selectedArticle = ref(null)
-const viewMode = ref('dashboard') // 'dashboard', 'timeline', 'article'
+const currentSubTopic = computed(() => {
+  return currentCategory.value?.subs?.find(s => s.id === activeSubTopic.value)
+})
 
-function openTopic(sub, category) {
-  selectedTopic.value = {
-    ...sub,
-    categoryName: category.name,
-    categoryIcon: category.icon
+function selectCategory(id) {
+  activeCategory.value = id
+  // Reset sub selection
+  const cat = knowledgeBase.value.find(c => c.id === id)
+  if (cat?.subs?.length > 0) {
+    selectSubTopic(cat.subs[0].id)
+  } else {
+    activeSubTopic.value = ''
+    activeArticle.value = null
   }
-  viewMode.value = 'timeline'
-  selectedArticle.value = null
 }
 
-function openArticle(article) {
-  selectedArticle.value = article
-  viewMode.value = 'article'
+function selectSubTopic(id) {
+  activeSubTopic.value = id
+  const sub = currentCategory.value?.subs?.find(s => s.id === id)
+  if (sub?.articles?.length > 0) {
+    activeArticle.value = sub.articles[0]
+  } else {
+    activeArticle.value = null
+  }
 }
 
-function backToDashboard() {
-  viewMode.value = 'dashboard'
-  selectedTopic.value = null
-}
-
-function backToTimeline() {
-  viewMode.value = 'timeline'
-  selectedArticle.value = null
+function selectArticle(article) {
+  activeArticle.value = article
 }
 
 function getStatusColor(status) {
@@ -118,440 +118,331 @@ function getStatusColor(status) {
 </script>
 
 <template>
-  <div class="learning-container">
-    <div class="header-area" v-if="viewMode === 'dashboard'">
-      <h1>知识库</h1>
-      <div class="filter-bar glass-panel">
-        <button 
-          v-for="filter in filters" 
-          :key="filter.id"
-          class="filter-btn"
-          :class="{ active: activeFilter === filter.id }"
-          @click="activeFilter = filter.id"
-        >
-          {{ filter.name }}
-        </button>
-      </div>
-    </div>
-
-    <!-- Dashboard View -->
-    <Transition name="page" mode="out-in">
-      <div v-if="viewMode === 'dashboard'" class="timeline-container">
-        <div v-for="category in filteredTopics" :key="category.id" class="timeline-section">
-          <div class="timeline-left">
-            <div class="timeline-marker glass-panel">
-              {{ category.icon }}
+  <div class="kb-container">
+    <div class="glass-layout">
+      <!-- Sidebar: Categories & Topics -->
+      <aside class="kb-sidebar">
+        <div class="sidebar-header">
+          <h2>知识库</h2>
+        </div>
+        
+        <div class="nav-groups">
+          <div v-for="category in knowledgeBase" :key="category.id" class="nav-group">
+            <div 
+              class="group-title"
+              :class="{ active: activeCategory === category.id }"
+              @click="selectCategory(category.id)"
+            >
+              <span class="icon">{{ category.icon }}</span>
+              {{ category.name }}
             </div>
-            <div class="timeline-line"></div>
-          </div>
-          
-          <div class="timeline-right">
-            <h2 class="category-title">{{ category.name }}</h2>
             
-            <div class="sub-grid">
+            <div class="sub-list" v-if="activeCategory === category.id">
               <div 
                 v-for="sub in category.subs" 
-                :key="sub.id" 
-                class="topic-card glass-panel"
-                @click="openTopic(sub, category)"
+                :key="sub.id"
+                class="sub-item"
+                :class="{ active: activeSubTopic === sub.id }"
+                @click.stop="selectSubTopic(sub.id)"
               >
-                <div class="card-content">
-                  <h3>{{ sub.name }}</h3>
-                  <p>{{ sub.description }}</p>
-                  <div class="card-footer">
-                    <span class="article-count">{{ sub.articles.length }} 篇文章</span>
-                  </div>
-                </div>
+                <span class="sub-name">{{ sub.name }}</span>
+                <span class="count-badge" v-if="sub.articles.length">{{ sub.articles.length }}</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </aside>
 
-      <!-- Article Timeline View -->
-      <div v-else-if="viewMode === 'timeline'" class="detail-container">
-        <button class="back-btn" @click="backToDashboard">← 返回知识库</button>
-        
-        <div class="topic-header-large">
-          <div class="header-icon-large glass-panel">{{ selectedTopic.categoryIcon }}</div>
-          <div class="header-text">
-            <h2>{{ selectedTopic.name }}</h2>
-            <p>{{ selectedTopic.description }}</p>
-          </div>
+      <!-- Middle: Article List -->
+      <div class="article-list-panel">
+        <div class="panel-header">
+          <h3>{{ currentSubTopic?.name }}</h3>
+          <p class="subtitle">{{ currentSubTopic?.description }}</p>
         </div>
 
-        <div class="article-timeline">
-          <div v-if="selectedTopic.articles.length === 0" class="empty-state">
-            <p>暂无文章，点击右上角添加。</p>
+        <div class="article-list">
+          <div v-if="!currentSubTopic?.articles.length" class="empty-state">
+            暂无文章
           </div>
           
           <div 
-            v-for="article in selectedTopic.articles" 
-            :key="article.id" 
-            class="timeline-item"
-            @click="openArticle(article)"
+            v-for="article in currentSubTopic?.articles" 
+            :key="article.id"
+            class="article-card"
+            :class="{ active: activeArticle?.id === article.id }"
+            @click="selectArticle(article)"
           >
-            <div class="item-date">{{ article.date }}</div>
-            <div class="item-dot"></div>
-            <div class="item-card glass-panel">
-              <div class="item-header">
-                <h4>{{ article.title }}</h4>
-                <span class="status-badge" :class="getStatusColor(article.status)">
-                  {{ article.status }}
-                </span>
-              </div>
+            <div class="card-top">
+              <h4>{{ article.title }}</h4>
+              <span class="status-dot" :class="getStatusColor(article.status)"></span>
+            </div>
+            <div class="card-meta">
+              <span>{{ article.date }}</span>
+              <span class="status-text">{{ article.status }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Article Reading View -->
-      <div v-else-if="viewMode === 'article'" class="detail-container">
-        <button class="back-btn" @click="backToTimeline">← 返回列表</button>
-        <div class="read-content glass-panel">
-          <h1>{{ selectedArticle.title }}</h1>
-          <div class="read-meta">
-            <span>{{ selectedArticle.date }}</span>
-            <span class="status-badge" :class="getStatusColor(selectedArticle.status)">
-              {{ selectedArticle.status }}
-            </span>
+      <!-- Right: Article Content -->
+      <main class="content-area">
+        <div v-if="activeArticle" class="article-viewer">
+          <div class="article-header">
+            <h1>{{ activeArticle.title }}</h1>
+            <div class="meta-tags">
+              <span class="date">📅 {{ activeArticle.date }}</span>
+              <span class="status-badge" :class="getStatusColor(activeArticle.status)">
+                {{ activeArticle.status }}
+              </span>
+            </div>
           </div>
-          <div class="markdown-body">
-            {{ selectedArticle.content }}
+          
+          <div class="article-body markdown-body">
+            {{ activeArticle.content }}
           </div>
         </div>
-      </div>
-    </Transition>
+        
+        <div v-else class="empty-selection">
+          <div class="placeholder-icon">📚</div>
+          <p>选择一篇文章开始阅读</p>
+        </div>
+      </main>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.learning-container {
-  padding: 20px;
-  max-width: 1200px;
+.kb-container {
+  height: calc(100vh - 120px); /* 减去 header 高度 */
+  width: 100%;
   margin: 0 auto;
-}
-
-.header-area {
-  margin-bottom: 40px;
-  text-align: center;
-}
-
-h1 {
-  font-size: 2.5rem;
-  margin-bottom: 20px;
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 700;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-}
-
-.filter-bar {
-  display: inline-flex;
-  padding: 6px;
-  border-radius: 35px;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.filter-btn {
-  padding: 10px 24px;
-  border-radius: 25px;
-  background: transparent;
-  color: rgba(0, 0, 0, 0.7);
-  font-weight: 600;
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
-  letter-spacing: 0.5px;
-}
-
-.filter-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  transform: translateY(-1px);
-}
-
-.filter-btn.active {
-  background: rgba(255, 255, 255, 0.25);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
-}
-
-/* Timeline Layout */
-.timeline-container {
-  display: flex;
-  flex-direction: column;
-  gap: 40px;
-  padding-left: 20px;
-}
-
-.timeline-section {
-  display: flex;
-  gap: 30px;
-  position: relative;
-}
-
-.timeline-left {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 60px;
-}
-
-.timeline-marker {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  z-index: 2;
-  background: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-.timeline-line {
-  flex: 1;
-  width: 4px;
-  background: rgba(255, 255, 255, 0.6);
-  margin-top: 10px;
-  border-radius: 2px;
-  box-shadow: 0 0 10px rgba(255,255,255,0.3);
-}
-
-.timeline-section:last-child .timeline-line {
-  display: none;
-}
-
-.timeline-right {
-  flex: 1;
-  padding-bottom: 20px;
-}
-
-.category-title {
-  font-size: 1.8rem;
-  margin-bottom: 20px;
-  color: rgba(255, 255, 255, 0.95);
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  height: 60px; /* Align with marker */
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.sub-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
-}
-
-.topic-card {
   padding: 20px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border: 1px solid rgba(255,255,255,0.4);
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-}
-
-.topic-card:hover {
-  transform: translateY(-5px);
-  background: rgba(255,255,255,0.9);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-}
-
-.card-content h3 {
-  font-size: 1.1rem;
-  margin-bottom: 5px;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.card-content p {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-  margin-bottom: 10px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.card-footer {
-  margin-top: auto;
-  padding-top: 10px;
-  border-top: 1px solid rgba(0,0,0,0.05);
+/* Main Unified Glass Layout */
+.glass-layout {
+  display: grid;
+  grid-template-columns: 220px 260px 1fr; /* 稍微减小侧边栏宽度，给内容区更多空间 */
+  height: 100%;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Sidebar Styles */
+.kb-sidebar {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: rgba(240, 242, 245, 0.5);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 20px;
+}
+
+.sidebar-header h2 {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+  font-weight: 700;
+  padding-left: 10px;
+  opacity: 0.8;
+}
+
+.nav-group {
+  margin-bottom: 5px;
+}
+
+.group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  font-size: 0.95rem;
+}
+
+.group-title:hover {
+  background: rgba(0,0,0,0.03);
+  color: var(--text-primary);
+}
+
+.group-title.active {
+  background: #fff;
+  color: var(--accent-color);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.sub-list {
+  margin: 5px 0 10px 15px;
+  padding-left: 10px;
+  border-left: 2px solid rgba(0,0,0,0.05);
+}
+
+.sub-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 2px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.sub-item:hover {
+  background: rgba(0,0,0,0.03);
+}
+
+.sub-item.active {
+  background: rgba(9, 132, 227, 0.1);
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.count-badge {
+  background: rgba(0,0,0,0.05);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Article List Panel */
+.article-list-panel {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.4);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.panel-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  background: rgba(255,255,255,0.3);
+}
+
+.panel-header h3 {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.subtitle {
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
 
-/* Detail Views */
-.detail-container {
-  animation: fadeIn 0.3s ease;
+.article-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
 }
 
-.topic-header-large {
-  display: flex;
-  align-items: center;
-  gap: 25px;
-  margin-bottom: 40px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
-}
-
-.header-icon-large {
-  width: 80px;
-  height: 80px;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-  background: rgba(255,255,255,0.5);
-}
-
-.header-text h2 {
-  font-size: 2.2rem;
-  margin-bottom: 10px;
-  color: rgba(255, 255, 255, 0.95);
-  font-weight: 700;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.header-text p {
-  font-size: 1.1rem;
-  color: rgba(255, 255, 255, 0.8);
-  font-weight: 500;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-/* Article Timeline */
-.article-timeline {
-  position: relative;
-  padding-left: 30px;
-  border-left: 2px solid rgba(0,0,0,0.1);
-  margin-left: 20px;
-}
-
-.timeline-item {
-  position: relative;
-  margin-bottom: 30px;
+.article-card {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 8px;
   cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s;
 }
 
-.item-dot {
-  position: absolute;
-  left: -36px;
-  top: 20px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--accent-color);
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
-  transition: all 0.3s;
+.article-card:hover {
+  background: rgba(255,255,255,0.6);
 }
 
-.timeline-item:hover .item-dot {
-  transform: scale(1.2);
+.article-card.active {
   background: #fff;
-  border-color: var(--accent-color);
+  border-color: rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-.item-date {
-  position: absolute;
-  left: -140px;
-  top: 18px;
-  width: 90px;
-  text-align: right;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-.item-card {
-  padding: 20px;
-  border-radius: 12px;
-  transition: all 0.3s;
-  background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.4);
-}
-
-.timeline-item:hover .item-card {
-  transform: translateX(10px);
-  background: #fff;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-}
-
-.item-header {
+.card-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  margin-bottom: 6px;
 }
 
-.item-header h4 {
-  font-size: 1.1rem;
+.card-top h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
   color: var(--text-primary);
+  line-height: 1.4;
   margin: 0;
 }
 
-/* Read View */
-.back-btn {
-  margin-bottom: 20px;
-  background: transparent;
-  color: var(--accent-color);
-  font-weight: 600;
-  font-size: 1rem;
-  padding: 0;
-  cursor: pointer;
-  border: none;
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
 }
 
-.back-btn:hover {
-  text-decoration: underline;
+.status-dot.green { background: #2ecc71; }
+.status-dot.blue { background: #0984e3; }
+.status-dot.yellow { background: #f1c40f; }
+.status-dot.gray { background: #b2bec3; }
+
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
 }
 
-.read-content {
-  padding: 40px;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.9);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+/* Content Area */
+.content-area {
+  background: #fff;
+  padding: 30px 40px; /* 减小 padding，避免在小屏幕上挤压内容 */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center content horizontally */
 }
 
-.read-content h1 {
-  font-size: 2.5rem;
+.article-viewer {
+  width: 100%;
+  max-width: 900px; /* 稍微放宽最大宽度，但保持可读性 */
+  min-width: 0; /* 关键：允许在 Flex 容器中收缩 */
+}
+
+.article-header {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  width: 100%;
+}
+
+.article-header h1 {
+  font-size: 2.2rem;
   margin-bottom: 15px;
-  color:#333
+  color: #2c3e50;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.3;
 }
 
-.read-meta {
+.meta-tags {
   display: flex;
   gap: 15px;
-  margin-bottom: 40px;
+  align-items: center;
+  font-size: 0.9rem;
   color: var(--text-secondary);
-  font-size: 0.95rem;
-  padding-bottom: 20px;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
-}
-
-.markdown-body {
-  font-size: 1.1rem;
-  line-height: 1.8;
-  color: var(--text-primary);
-  white-space: pre-wrap;
 }
 
 .status-badge {
@@ -566,14 +457,46 @@ h1 {
 .status-badge.yellow { background: #fff3cd; color: #f1c40f; }
 .status-badge.gray { background: #f1f2f6; color: #a4b0be; }
 
-.empty-state {
-  text-align: center;
-  color: var(--text-secondary);
-  margin-top: 50px;
+
+
+.article-body {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #34495e;
+  white-space: pre-wrap;
+  width: 100%;
+  overflow-wrap: break-word; /* 防止长单词导致溢出 */
+  word-wrap: break-word;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.empty-selection, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+}
+
+.placeholder-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  opacity: 0.3;
+  color: #ccc;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.2);
 }
 </style>

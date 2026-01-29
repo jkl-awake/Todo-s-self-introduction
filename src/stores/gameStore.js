@@ -46,7 +46,7 @@ export const useGameStore = defineStore('game', () => {
     error.value = null
     try {
       // 这是一个示例 API 地址，你需要替换成真实的后端 API
-      // const response = await fetch('https://api.example.com/games')
+      // const response = await fetch('http://localhost:5053/games')
       
       // 模拟 API 请求延迟
       await new Promise(resolve => setTimeout(resolve, 1000))
