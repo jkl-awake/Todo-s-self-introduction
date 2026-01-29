@@ -1,66 +1,10 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useContentStore } from '../stores/contentStore'
+import { storeToRefs } from 'pinia'
 
-// Mock Data Structure
-const knowledgeBase = ref([
-  {
-    id: 'languages',
-    name: '编程语言',
-    icon: '💻',
-    subs: [
-      {
-        id: 'python',
-        name: 'Python',
-        description: '人生苦短，我用 Python',
-        articles: [
-          { id: 101, title: 'Python 装饰器深入理解', date: '2025-12-20', status: '已掌握', content: '装饰器本质上是一个 Python 函数，它可以让其他函数在不需要做任何代码变动的前提下增加额外功能...' },
-          { id: 102, title: 'Asyncio 异步编程指南', date: '2025-12-22', status: '学习中', content: 'Asyncio 是用来编写并发代码的库，使用 async/await 语法...' }
-        ]
-      },
-      {
-        id: 'js',
-        name: 'JavaScript / TS',
-        description: 'Web 开发的基石',
-        articles: [
-          { id: 201, title: 'ES6+ 新特性汇总', date: '2025-10-15', status: '已掌握', content: 'let, const, 箭头函数, 解构赋值...' },
-          { id: 202, title: 'TypeScript 泛型实战', date: '2025-11-01', status: '复习中', content: '泛型（Generics）是指在定义函数、接口或类的时候，不预先指定具体的类型...' }
-        ]
-      },
-      {
-        id: 'rust',
-        name: 'Rust',
-        description: '高性能与安全并存',
-        articles: []
-      }
-    ]
-  },
-  {
-    id: 'frameworks',
-    name: '框架与架构',
-    icon: '🏗️',
-    subs: [
-      { 
-        id: 'vue', 
-        name: 'Vue.js 生态', 
-        description: '渐进式 JavaScript 框架',
-        articles: [
-          { id: 301, title: 'Vue 3 组合式 API 最佳实践', date: '2025-12-10', status: '学习中', content: 'Composition API 提供了更好的逻辑复用能力...' }
-        ] 
-      },
-      { id: 'react', name: 'React', description: '构建用户界面的库', articles: [] },
-      { id: 'spring', name: 'Spring Boot', description: 'Java 后端开发标准', articles: [] }
-    ]
-  },
-  {
-    id: 'cs',
-    name: '计算机基础',
-    icon: '🧠',
-    subs: [
-      { id: 'algo', name: '数据结构与算法', description: '内功修炼', articles: [] },
-      { id: 'network', name: '计算机网络', description: '连接世界', articles: [] }
-    ]
-  }
-])
+const store = useContentStore()
+const { knowledgeBase } = storeToRefs(store)
 
 const activeCategory = ref(knowledgeBase.value?.[0]?.id || '')
 const activeSubTopic = ref(knowledgeBase.value?.[0]?.subs?.[0]?.id || '')

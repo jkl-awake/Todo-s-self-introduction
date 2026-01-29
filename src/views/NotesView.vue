@@ -1,11 +1,10 @@
 <script setup>
 import { ref } from 'vue'
+import { useContentStore } from '../stores/contentStore'
+import { storeToRefs } from 'pinia'
 
-const notes = ref([
-  { id: 1, date: '2025-12-24', title: '平安夜的思考', content: '今天是一个安静的夜晚，重新思考了明年的计划...' },
-  { id: 2, date: '2025-12-20', title: '新游戏体验', content: '刚开始玩《黑神话：悟空》，美术风格真的太震撼了。' },
-  { id: 3, date: '2025-12-15', title: '冬日随笔', content: '天气转凉了，适合在家里喝热咖啡写代码。' }
-])
+const store = useContentStore()
+const { notes } = storeToRefs(store)
 
 const selectedNote = ref(notes.value[0])
 const isEditing = ref(false)
@@ -189,6 +188,7 @@ h1 {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
 }
 
 .title-input {
@@ -212,6 +212,7 @@ h1 {
   border: none;
   background: transparent;
   resize: none;
+  overflow-y: auto;
   font-size: 1.1rem;
   line-height: 1.6;
   color: var(--text-primary);

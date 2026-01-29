@@ -5,6 +5,7 @@ import GameDetailView from '../views/GameDetailView.vue'
 import StatisticsView from '../views/StatisticsView.vue'
 import LearningView from '../views/LearningView.vue'
 import NotesView from '../views/NotesView.vue'
+import ManagementView from '../views/ManagementView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -38,6 +39,11 @@ const router = createRouter({
       path: '/notes',
       name: 'notes',
       component: NotesView
+    },
+    {
+      path: '/management',
+      name: 'management',
+      component: ManagementView
     }
   ]
 })
