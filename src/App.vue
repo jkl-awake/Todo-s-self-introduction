@@ -1,6 +1,9 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
 import VideoBackground from './components/VideoBackground.vue'
+import { useAuthStore } from './stores/authStore'
+
+const authStore = useAuthStore()
 </script>
 
 <template>
@@ -16,6 +19,7 @@ import VideoBackground from './components/VideoBackground.vue'
           <RouterLink to="/games">游戏库</RouterLink>
           <RouterLink to="/learning">学习记录</RouterLink>
           <RouterLink to="/notes">随记</RouterLink>
+          <a v-if="authStore.isAdmin" href="#" @click.prevent="authStore.logout()" class="logout-btn">退出管理</a>
         </nav>
       </div>
     </header>
@@ -114,5 +118,21 @@ nav a.router-link-active::after {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.logout-btn {
+  margin-left: 20px;
+  padding: 5px 15px;
+  border: 1px solid rgba(255, 99, 71, 0.5);
+  border-radius: 20px;
+  color: #ff6347; /* Tomato color for exit */
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 99, 71, 0.1);
+  color: #ff4500;
+  border-color: #ff4500;
 }
 </style>

@@ -1,9 +1,11 @@
 <script setup>
 import { ref } from 'vue'
 import { useContentStore } from '../stores/contentStore'
+import { useAuthStore } from '../stores/authStore'
 import { storeToRefs } from 'pinia'
 
 const store = useContentStore()
+const authStore = useAuthStore()
 const { notes } = storeToRefs(store)
 
 const selectedNote = ref(notes.value[0])
@@ -46,7 +48,7 @@ function saveNote() {
     <div class="diary-layout glass-panel">
       <!-- Sidebar List -->
       <div class="diary-sidebar">
-        <button class="new-note-btn" @click="startNewNote">+ 写日记</button>
+        <button v-if="authStore.isAdmin" class="new-note-btn" @click="startNewNote">+ 写日记</button>
         <div class="note-list">
           <div 
             v-for="note in notes" 

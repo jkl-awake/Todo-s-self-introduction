@@ -1,94 +1,128 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { gameApi } from '@/api/game'
 
 export const useGameStore = defineStore('game', () => {
-  // Load from localStorage if available, otherwise use default
-  const storedGames = localStorage.getItem('my-games')
-  const games = ref(storedGames ? JSON.parse(storedGames) : [
-    {
-      id: 1,
-      title: '塞尔达传说：旷野之息',
-      platform: 'Switch',
-      status: 'Completed',
-      rating: 5,
-      cover: 'https://placeholder.co/150x200?text=Zelda',
-      playtime: 120,
-      notes: '神作，开放世界的标杆。'
-    },
-    {
-      id: 2,
-      title: '艾尔登法环',
-      platform: 'PC',
-      status: 'Playing',
-      rating: 4.5,
-      cover: 'https://placeholder.co/150x200?text=Elden+Ring',
-      playtime: 45,
-      notes: '非常难，但是探索感无与伦比。'
-    },
-    {
-      id: 3,
-      title: '赛博朋克 2077',
-      platform: 'PC',
-      status: 'Backlog',
-      rating: 0,
-      cover: 'https://placeholder.co/150x200?text=Cyberpunk',
-      playtime: 0,
-      notes: ''
-    }
-  ])
-
+  // 状态 State
+  const games = ref([])
   const isLoading = ref(false)
   const error = ref(null)
 
-  // 示例：从 API 加载游戏列表
-  async function fetchGames() {
+  // 分页状态
+  const pagination = ref({
+    current: 1,
+    size: 10,
+    total: 0
+  })
+
+  // 动作 Actions (调用后端 API)
+
+  // 1. 获取列表
+  async function fetchGames(page = 1, size = 10) {
     isLoading.value = true
     error.value = null
     try {
-      // 这是一个示例 API 地址，你需要替换成真实的后端 API
-      // const response = await fetch('http://localhost:5053/games')
+      // 调用封装好的 API 方法
+      // 传入分页参数
+      const params = { current: page, size: size }
+      const res = await gameApi.list(params)
       
-      // 模拟 API 请求延迟
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // 更新列表
+      games.value = res.list || []
       
-      // 模拟返回数据（实际使用时请取消上面 fetch 的注释并删除下面的模拟数据）
-      // if (!response.ok) throw new Error('Failed to fetch games')
-      // const data = await response.json()
-      // games.value = data
-      
-      console.log('API 请求示例已执行')
+      // 更新分页状态
+      pagination.value.current = res.current || page
+      pagination.value.size = res.size || size
+      pagination.value.total = res.total || 0
     } catch (err) {
-      error.value = err.message
+      error.value = err.message || '加载失败'
       console.error('Error fetching games:', err)
     } finally {
       isLoading.value = false
     }
   }
 
-  // Watch for changes and save to localStorage
-  watch(games, (newGames) => {
-    localStorage.setItem('my-games', JSON.stringify(newGames))
-  }, { deep: true })
-
-  function addGame(game) {
-    games.value.push({ 
-      ...game, 
-      id: Date.now(),
-      rating: Number(game.rating),
-      playtime: Number(game.playtime)
-    })
+  // 2. 新增游戏
+  async function addGame(gameData) {
+    isLoading.value = true
+    try {
+      const payload = { ...gameData, id: 0 }
+      const res = await gameApi.operation(payload)
+      // 如果后端返回了新对象则添加到列表，否则重新拉取
+      if (res && res.id) {
+        games.value.push(res)
+      } else {
+        await fetchGames()
+      }
+      return res
+    } catch (err) {
+      error.value = err.message || '添加失败'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
+  // 3. 更新游戏
+  async function updateGame(id, gameData) {
+    isLoading.value = true
+    try {
+      const payload = { ...gameData, id: id }
+      await gameApi.operation(payload)
+      // 更新本地状态
+      const index = games.value.findIndex(g => g.id === id)
+      if (index !== -1) {
+        // 合并新数据
+        games.value[index] = { ...games.value[index], ...gameData }
+      }
+    } catch (err) {
+      error.value = err.message || '更新失败'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // 4. 删除游戏
+  async function deleteGame(id) {
+    try {
+      await gameApi.delete(id)
+      const index = games.value.findIndex(g => g.id === id)
+      if (index !== -1) {
+        games.value.splice(index, 1)
+      }
+    } catch (err) {
+      error.value = err.message || '删除失败'
+      throw err
+    }
+  }
+
+  // 4. 获取游戏详情
+  async function fetchGameDetail(id) {
+    try {
+      const detail = await gameApi.get(id)
+      return detail
+    } catch (err) {
+      console.error('Error fetching game detail:', err)
+      throw err
+    }
+  }
+
+  // Getters
   function getGameById(id) {
     return games.value.find(g => g.id === Number(id))
   }
 
-  function deleteGame(id) {
-    const index = games.value.findIndex(g => g.id === id)
-    if (index !== -1) {
-      games.value.splice(index, 1)
-    }
+  return { 
+    games, 
+    isLoading, 
+    error, 
+    pagination,
+    fetchGames, 
+    fetchGameDetail,
+    addGame, 
+    updateGame,
+    deleteGame, 
+    getGameById 
   }
-
-  return { games, isLoading, error, fetchGames, addGame, getGameById, deleteGame }
 })
